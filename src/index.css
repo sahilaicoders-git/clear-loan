@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased transition-colors duration-500;
+  }
+  .dark body {
+    @apply bg-[#09090b] text-gray-100;
+  }
+}
+
+@layer utilities {
+  /* Hide number input spin buttons */
+  .hide-spin-button::-webkit-inner-spin-button, 
+  .hide-spin-button::-webkit-outer-spin-button { 
+    -webkit-appearance: none; 
+    margin: 0; 
+  }
+  .hide-spin-button {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  .animate-enter {
+    animation: enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  /* Specific delay variations */
+  .delay-100 { animation-delay: 100ms; }
+  .delay-200 { animation-delay: 200ms; }
+
+  @keyframes enter {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+  @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+}
