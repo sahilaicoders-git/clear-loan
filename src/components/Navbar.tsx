@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogOut, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthProvider';
@@ -8,6 +9,26 @@ export function Navbar() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { isDark, toggleTheme } = useTheme();
+  
+  const [isVisible, setIsVisible] = useState(true);
+
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
+      }
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -15,9 +36,10 @@ export function Navbar() {
   };
 
   return (
-    <div className="fixed top-6 left-0 right-0 w-full flex justify-center z-50 px-4 pointer-events-none animate-enter">
-      <nav className="w-full md:w-[700px] lg:w-[900px] bg-white/30 dark:bg-[#09090b]/60 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-full px-6 py-3 pointer-events-auto transition-all duration-500 hover:bg-white/40 dark:hover:bg-[#09090b]/80">
-        <div className="flex justify-between items-center w-full">
+    <div className="fixed top-6 left-0 right-0 w-full flex justify-center z-[100] px-4 pointer-events-none animate-enter">
+      <div className={`w-full flex justify-center transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isVisible ? 'translate-y-0 opacity-100' : '-translate-y-32 opacity-0'}`}>
+        <nav className="w-full md:w-[700px] lg:w-[900px] bg-white/30 dark:bg-[#09090b]/60 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-full px-6 py-3 pointer-events-auto transition-all duration-500 hover:bg-white/40 dark:hover:bg-[#09090b]/80">
+          <div className="flex justify-between items-center w-full">
           <Link to="/" className="flex items-center gap-3 no-underline group">
             <div className="bg-gray-900 dark:bg-white rounded-full flex items-center justify-center w-8 h-8 transition-transform group-hover:scale-110">
               <span className="text-white dark:text-gray-900 font-extrabold text-sm ml-px line-height-none">sp</span>
@@ -69,7 +91,8 @@ export function Navbar() {
             )}
           </div>
         </div>
-      </nav>
+        </nav>
+      </div>
     </div>
   );
 }

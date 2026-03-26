@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, ArrowRight, Loader2, Plus, LineChart, ChevronDown, Rocket, X, Check, Maximize2, Filter } from 'lucide-react';
 import { supabase } from '../utils/supabase';
@@ -116,6 +116,30 @@ export function Loans() {
     return pass;
   });
 
+  const portfolioMetrics = useMemo(() => {
+    let totalPrincipal = 0;
+    let totalEmi = 0;
+    let totalInterest = 0;
+
+    loans.forEach(loan => {
+      totalPrincipal += loan.principal;
+      const calc = calculateLoan({
+         principal: loan.principal,
+         annualInterestRate: loan.annual_interest_rate,
+         tenureYears: loan.tenure_years,
+         monthlyPrepayment: loan.monthly_prepayment || 0,
+         startDate: loan.start_date || new Date().toISOString().split('T')[0],
+         category: loan.category || 'Home Loan',
+         calcMethod: loan.calc_method || 'standard',
+         oneTimePrepayments: loan.one_time_prepayments || {}
+      });
+      totalEmi += calc.monthlyEmi + (loan.monthly_prepayment || 0);
+      totalInterest += calc.totalInterestWithPrepayment;
+    });
+
+    return { totalPrincipal, totalEmi, totalInterest };
+  }, [loans]);
+
   if (!user) return null;
 
   return (
@@ -161,6 +185,27 @@ export function Loans() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
+
+          {/* Portfolio Grand Totals */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 relative z-10 transition-colors">
+             <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col justify-between transition-colors overflow-hidden relative group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 dark:bg-white/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-colors group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/10 duration-500"></div>
+               <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block relative z-10">Total Active Principal</span>
+               <h3 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight relative z-10">{formatCurrency(portfolioMetrics.totalPrincipal)}</h3>
+             </div>
+             
+             <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col justify-between transition-colors overflow-hidden relative group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200 dark:bg-indigo-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-colors group-hover:bg-indigo-300 dark:group-hover:bg-indigo-400/30 duration-500"></div>
+               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-4 block relative z-10">Aggregated Monthly EMI</span>
+               <h3 className="text-3xl sm:text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight relative z-10">{formatCurrency(portfolioMetrics.totalEmi)}</h3>
+             </div>
+             
+             <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col justify-between transition-colors overflow-hidden relative group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 dark:bg-rose-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-colors group-hover:bg-rose-100 dark:group-hover:bg-rose-500/10 duration-500"></div>
+               <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block relative z-10">Total Lifetime Interest</span>
+               <h3 className="text-3xl sm:text-4xl font-black text-rose-500 dark:text-rose-400 tracking-tight relative z-10">{formatCurrency(portfolioMetrics.totalInterest)}</h3>
+             </div>
+          </div>
 
           {/* Filter Bar */}
           <div className="bg-white dark:bg-[#09090b] border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm p-4 sm:px-6 relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-4 transition-colors">
