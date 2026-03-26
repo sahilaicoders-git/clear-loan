@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trash2, ArrowRight, Loader2, Plus, LineChart, ChevronDown, Rocket, X, Check, Maximize2, Filter } from 'lucide-react';
+import { Trash2, ArrowRight, Loader2, Plus, LineChart, ChevronDown, Rocket, X, Maximize2, Filter } from 'lucide-react';
 import { supabase } from '../utils/supabase';
 import { useAuth } from '../context/AuthProvider';
 import { calculateLoan } from '../utils/loanCalculator';
