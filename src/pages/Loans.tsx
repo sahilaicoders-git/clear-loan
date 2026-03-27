@@ -118,6 +118,7 @@ export function Loans() {
 
   const portfolioMetrics = useMemo(() => {
     let totalPrincipal = 0;
+    let totalCurrentPrincipal = 0;
     let totalEmi = 0;
     let totalInterest = 0;
 
@@ -133,11 +134,22 @@ export function Loans() {
          calcMethod: loan.calc_method || 'standard',
          oneTimePrepayments: loan.one_time_prepayments || {}
       });
+      // Calculate current principal for this loan
+      const startNode = new Date(loan.start_date || new Date().toISOString().split('T')[0]);
+      const nowNode = new Date();
+      let cIndex = (nowNode.getFullYear() - startNode.getFullYear()) * 12 + (nowNode.getMonth() - startNode.getMonth()) + 1;
+      cIndex = Math.max(1, cIndex);
+      const amort = (loan.monthly_prepayment || Object.keys(loan.one_time_prepayments || {}).length > 0)
+        ? calc.prepaymentAmortization
+        : calc.standardAmortization;
+      const activeIndex = Math.min(cIndex - 1, amort.length - 1);
+      const currentBalance = amort[activeIndex]?.balance ?? loan.principal;
+      totalCurrentPrincipal += currentBalance;
       totalEmi += calc.monthlyEmi + (loan.monthly_prepayment || 0);
       totalInterest += calc.totalInterestWithPrepayment;
     });
 
-    return { totalPrincipal, totalEmi, totalInterest };
+    return { totalPrincipal, totalCurrentPrincipal, totalEmi, totalInterest };
   }, [loans]);
 
   if (!user) return null;
@@ -187,19 +199,25 @@ export function Loans() {
         <div className="flex flex-col gap-6">
 
           {/* Portfolio Grand Totals */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 relative z-10 transition-colors">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6 relative z-10 transition-colors">
              <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col justify-between transition-colors overflow-hidden relative group">
                <div className="absolute top-0 right-0 w-32 h-32 bg-gray-50 dark:bg-white/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-colors group-hover:bg-indigo-50 dark:group-hover:bg-indigo-500/10 duration-500"></div>
                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block relative z-10">Total Active Principal</span>
                <h3 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight relative z-10">{formatCurrency(portfolioMetrics.totalPrincipal)}</h3>
              </div>
-             
+
+             <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col justify-between transition-colors overflow-hidden relative group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-200 dark:bg-emerald-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-colors group-hover:bg-emerald-300 dark:group-hover:bg-emerald-400/30 duration-500"></div>
+               <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 dark:text-emerald-400 mb-4 block relative z-10">Total Current Principal</span>
+               <h3 className="text-3xl sm:text-4xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight relative z-10">{formatCurrency(portfolioMetrics.totalCurrentPrincipal)}</h3>
+             </div>
+
              <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col justify-between transition-colors overflow-hidden relative group">
                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200 dark:bg-indigo-500/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-colors group-hover:bg-indigo-300 dark:group-hover:bg-indigo-400/30 duration-500"></div>
                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 mb-4 block relative z-10">Aggregated Monthly EMI</span>
                <h3 className="text-3xl sm:text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight relative z-10">{formatCurrency(portfolioMetrics.totalEmi)}</h3>
              </div>
-             
+
              <div className="bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 p-6 sm:p-8 rounded-3xl shadow-sm flex flex-col justify-between transition-colors overflow-hidden relative group">
                <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 dark:bg-rose-500/5 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none transition-colors group-hover:bg-rose-100 dark:group-hover:bg-rose-500/10 duration-500"></div>
                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4 block relative z-10">Total Lifetime Interest</span>
@@ -245,8 +263,9 @@ export function Loans() {
           {/* Table Header Configuration */}
           <div className="hidden lg:flex items-center px-6 py-3 bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/10 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
              <div className="flex-[2] min-w-[200px]">Asset Profile</div>
-             <div className="flex-[3] flex items-center justify-between px-8">
+             <div className="flex-[4] flex items-center justify-between px-8">
                <div className="w-[120px]">Principal</div>
+               <div className="w-[120px]">Current Principal</div>
                <div className="w-[70px]">Rate</div>
                <div className="w-[70px]">Tenure</div>
                <div className="w-[120px]">Monthly EMI</div>
@@ -321,12 +340,40 @@ export function Loans() {
                     </div>
 
                     {/* Stats Matrix */}
-                    <div className="flex-[3] grid grid-cols-2 lg:flex lg:items-center lg:justify-between px-2 py-4 lg:py-0 lg:px-8 mt-4 lg:mt-0 border-y lg:border-y-0 border-gray-100 dark:border-white/5 gap-y-3 transition-colors">
-                      
+                    <div className="flex-[4] grid grid-cols-2 lg:flex lg:items-center lg:justify-between px-2 py-4 lg:py-0 lg:px-8 mt-4 lg:mt-0 border-y lg:border-y-0 border-gray-100 dark:border-white/5 gap-y-3 transition-colors">
                       {/* Mobile Labels / Desktop Values */}
                       <div className="w-[120px]">
                         <span className="lg:hidden text-[10px] text-gray-400 font-bold uppercase block mb-0.5">Principal</span>
                         <span className="text-sm font-bold text-gray-900 dark:text-gray-200">{formatCurrency(loan.principal)}</span>
+                      </div>
+                      <div className="w-[120px]">
+                        <span className="lg:hidden text-[10px] text-gray-400 font-bold uppercase block mb-0.5">Current Principal</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-200">
+                          {(() => {
+                            // Calculate current principal balance
+                            const calc = calculateLoan({
+                              principal: loan.principal,
+                              annualInterestRate: loan.annual_interest_rate,
+                              tenureYears: loan.tenure_years,
+                              monthlyPrepayment: loan.monthly_prepayment || 0,
+                              startDate: loan.start_date || new Date().toISOString().split('T')[0],
+                              category: loan.category || 'Home Loan',
+                              calcMethod: loan.calc_method || 'standard',
+                              oneTimePrepayments: loan.one_time_prepayments || {}
+                            });
+                            // Find the current month index
+                            const startNode = new Date(loan.start_date || new Date().toISOString().split('T')[0]);
+                            const nowNode = new Date();
+                            let cIndex = (nowNode.getFullYear() - startNode.getFullYear()) * 12 + (nowNode.getMonth() - startNode.getMonth()) + 1;
+                            cIndex = Math.max(1, cIndex);
+                            const amort = (loan.monthly_prepayment || Object.keys(loan.one_time_prepayments || {}).length > 0)
+                              ? calc.prepaymentAmortization
+                              : calc.standardAmortization;
+                            const activeIndex = Math.min(cIndex - 1, amort.length - 1);
+                            const currentBalance = amort[activeIndex]?.balance ?? loan.principal;
+                            return formatCurrency(currentBalance);
+                          })()}
+                        </span>
                       </div>
                       <div className="w-[70px]">
                         <span className="lg:hidden text-[10px] text-gray-400 font-bold uppercase block mb-0.5">Rate</span>
